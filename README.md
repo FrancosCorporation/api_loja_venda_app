@@ -1,5 +1,25 @@
 # api_loja_venda_app
 
+## 🐳 Instalação e Execução (Docker) — recomendado
+
+### Pré-requisitos
+- [Docker](https://docs.docker.com/get-docker/) + Docker Compose
+
+### Rodar com Docker
+```bash
+docker compose up --build
+```
+```bash
+docker run --rm -v $(pwd):/src -w /src mcr.microsoft.com/dotnet/sdk:8.0 dotnet run
+```
+
+### Sem Docker (local)
+```bash
+# Requer .NET SDK
+dotnet build
+dotnet run
+```
+
 Base de uma API de loja/vendas em ASP.NET Core 5: infraestrutura de conexão com MongoDB, geração e validação de tokens JWT e hash de senhas com BCrypt, documentada via Swagger.
 
 ![C#](https://img.shields.io/badge/C%23-239120?style=flat-square&logo=csharp&logoColor=white)
