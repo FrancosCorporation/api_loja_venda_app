@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [origin]
+  pull_request:
+    branches: [origin]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore --warnaserror
+      - name: Check vulnerable dependencies
+        run: dotnet list package --vulnerable --include-transitive
