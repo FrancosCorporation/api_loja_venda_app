@@ -1,9 +1,11 @@
 namespace api_loja_venda_app.Models
 {
-    public class AppSettings 
+    public sealed class AppSettings
     {
-        public string JWT_SecurityKey {get; set;}
-        public string JWT_Issuer {get; set;}
-        public string JWT_Audience {get; set;}
+        public string SecurityKey { get; set; } = string.Empty;
+        public string Issuer { get; set; } = string.Empty;
+        public string Audience { get; set; } = string.Empty;
+        public int AccessTokenMinutes { get; set; } = 60;
+        public int PasswordResetTokenMinutes { get; set; } = 120;
     }
 }

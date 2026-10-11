@@ -1,15 +1,14 @@
-using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using api_loja_venda_app.Models;
 
 namespace api_loja_venda_app.DependencyServices
 {
     public interface ITokenService
     {
-        dynamic GenerateToken();
+        TokenResponse GenerateToken(string userId, string email);
 
-        dynamic GenerateTokenResetPassword(string email);
+        TokenResponse GenerateTokenResetPassword(string email);
 
-        dynamic ValidateToken(string jwtString);
-
-        JwtPayload UnGenereteToken(string jwtString);
+        bool TryValidateToken(string jwtString, TokenPurpose expectedPurpose, out ClaimsPrincipal principal);
     }
 }

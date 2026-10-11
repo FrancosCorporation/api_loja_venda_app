@@ -1,102 +1,47 @@
 # api_loja_venda_app
 
-## 🐳 Instalação e Execução (Docker) — recomendado
+Base de infraestrutura para uma API de loja em ASP.NET Core. O repositório contém serviços de conexão MongoDB, emissão e validação de JWT e hash de senhas. Ainda não há modelos de domínio, controllers ou rotas de negócio.
 
-### Pré-requisitos
-- [Docker](https://docs.docker.com/get-docker/) + Docker Compose
+## Requisitos
 
-### Rodar com Docker
-```bash
-docker compose up --build
-```
-```bash
-docker run --rm -v $(pwd):/src -w /src mcr.microsoft.com/dotnet/sdk:8.0 dotnet run
-```
+- .NET SDK 10
+- MongoDB local ou uma connection string fornecida pelo ambiente
 
-### Sem Docker (local)
+## Configuração
+
+O projeto nunca deve receber chaves JWT ou credenciais MongoDB por arquivos versionados. Defina os segredos no ambiente:
+
 ```bash
-# Requer .NET SDK
-dotnet build
+export JWT_SECURITY_KEY="$(openssl rand -hex 48)"
+export MONGODB_CONNECTION_STRING="mongodb://localhost:27017/api_loja_venda_app"
 dotnet run
 ```
 
-Base de uma API de loja/vendas em ASP.NET Core 5: infraestrutura de conexão com MongoDB, geração e validação de tokens JWT e hash de senhas com BCrypt, documentada via Swagger.
+`JWT_SECURITY_KEY` deve conter pelo menos 48 bytes UTF-8 gerados aleatoriamente. Sem uma chave válida, o serviço falha ao iniciar. `MONGODB_CONNECTION_STRING` substitui o endereço local padrão; credenciais de produção devem ser fornecidas pelo cofre de segredos da implantação.
 
-![C#](https://img.shields.io/badge/C%23-239120?style=flat-square&logo=csharp&logoColor=white)
-![.NET](https://img.shields.io/badge/.NET-5.0-512BD4?style=flat-square&logo=dotnet&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-black?style=flat-square&logo=jsonwebtokens)
-![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow?style=flat-square)
+O emissor, a audiência e os limites de validade ficam na seção `AppSettings` de `appsettings.json`. Eles podem ser substituídos por `AppSettings__Issuer`, `AppSettings__Audience`, `AppSettings__AccessTokenMinutes` e `AppSettings__PasswordResetTokenMinutes`. Em produção, defina também `AllowedHosts` com o domínio público do serviço.
 
-## Sobre
+## Serviços disponíveis
 
-Projeto de API para um aplicativo de loja/vendas (`loj.app`). O repositório reúne a camada de infraestrutura reutilizável do backend — acesso ao MongoDB, autenticação por JWT e hashing de senhas — já ligada por injeção de dependência e exposta no Swagger. As regras de negócio e os controllers da loja ainda não estão implementados neste repositório.
+- `MongoDbService`: cria um cliente MongoDB singleton.
+- `TokenService`: emite tokens de acesso com validade de até 60 minutos e tokens de redefinição com validade de até 120 minutos. Valida assinatura HMAC-SHA384, emissor, audiência, expiração e finalidade do token.
+- `HashService`: cria e confere hashes de senha com BCrypt.
+- Swagger aparece apenas em Development.
 
-## Funcionalidades
+O chamador de `GenerateToken` precisa passar o ID e o e-mail da conta autenticada, obtidos de uma fonte confiável. O repositório ainda não implementa autenticação, controllers, recuperação de senha, revogação ou refresh tokens.
 
-Comprovadas pelo código em `Services/Default/` e `DependencyServices/`:
-
-- **Conexão MongoDB** via `MongoDbService`, registrado como singleton e configurado pela seção `DatabaseSetting` do `appsettings.json`.
-- **Tokens JWT** com `TokenService` (`System.IdentityModel.Tokens.Jwt`, assinatura HMAC-SHA384):
-  - token de acesso com 30 dias de validade;
-  - token de redefinição de senha com 2 horas de validade e claim de e-mail;
-  - validação de token com checagem de expiração e leitura do payload (`JwtPayload`).
-- **Hash de senha** com `HashService` (BCrypt.Net-Next, variante SHA-512) para criar hash e verificar credenciais.
-- **Swagger UI** com comentários XML habilitados (`GenerateDocumentationFile` no `.csproj`), acessível em `/swagger` no ambiente de desenvolvimento.
-
-> Não há controllers, models de domínio ou rotas de negócio neste repositório.
-
-## Stack
-
-- **Linguagem/framework**: C# com ASP.NET Core 5.0 (Web API)
-- **Banco de dados**: MongoDB — `MongoDB.Bson`, `MongoDB.Driver`, `MongoDB.Driver.Core` 2.13.2
-- **Autenticação**: `System.IdentityModel.Tokens.Jwt` 6.13.1
-- **Hash de senhas**: `BCrypt.Net-Next` 4.0.2
-- **Serialização**: `Newtonsoft.Json` 13.0.1
-- **Documentação**: `Swashbuckle.AspNetCore` 5.6.3
-- **E-mail**: SMTP (Zoho Mail)
-
-## Como rodar
-
-Requisito documentado originalmente: **.NET Core 5 — versão 5.0.302**.
+## Desenvolvimento
 
 ```bash
 dotnet restore
-dotnet run
+dotnet build --configuration Release
 ```
 
-Configuração necessária no `appsettings.json` (seções lidas por `Startup.cs`):
+O workflow de CI restaura dependências, compila em Release e verifica avisos de vulnerabilidades altas e críticas no NuGet.
 
-```json
-{
-  "DatabaseSetting": { "ConnectionString": "mongodb://usuario:senha@host:27017" },
-  "AppSettings": {
-    "JWT_SecurityKey": "<chave-de-assinatura>",
-    "JWT_Issuer": "",
-    "JWT_Audience": ""
-  }
-}
-```
+## Segurança
 
-> Atenção: a chave `JWT_SecurityKey` e a connection string atualmente versionadas são de desenvolvimento e devem ser substituídas por variáveis de ambiente/segredos antes de qualquer uso real.
-
-SMTP utilizado pelo projeto (documentado no README original): servidor `smtp.zoho.com`, porta `465`, segurança `SSL`, remetente `contato@loj.app`. A senha do e-mail **não** é versionada e deve ser fornecida via configuração/segredo.
-
-## Estrutura do projeto
-
-```
-api_loja_venda_app/
-├── DependencyServices/         # Interfaces: IMongoDbService, ITokenService
-├── Models/
-│   └── Configs/                # AppSettings (JWT) e DatabaseSetting (Mongo)
-├── Services/
-│   └── Default/                # HashService, MongoDbService, TokenService
-├── Properties/                 # launchSettings.json
-├── Program.cs
-├── Startup.cs                  # DI, Swagger e pipeline HTTP
-└── api_loja_venda_app.csproj
-```
+Os segredos que já foram versionados precisam ser rotacionados fora deste repositório. A remoção dos arquivos atuais não apaga os valores de commits antigos; a limpeza do histórico Git deve ser coordenada com todos os clones e com o provedor remoto. Consulte [SECURITY.md](SECURITY.md).
 
 ## Licença
 
